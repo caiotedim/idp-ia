@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDP Completo com Assistente IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .hidden { display: none !important; }
+
+        /* Login */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: url('https://placehold.co/1920x1080/6366F1/E0E7FF?text=IDP+Bem-Vindo'); /* Imagem de fundo placeholder */
+            background-size: cover;
+            background-position: center;
+        }
+        .login-card {
+            background-color: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(8px);
+        }
+        .sso-button {
+            background-color: #4f46e5; /* Indigo */
+        }
+        .sso-button:hover {
+            background-color: #4338ca;
+        }
+
+        /* IDP Principal */
+        .idp-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .idp-sidebar {
+            width: 260px;
+            background-color: #1f2937;
+            color: #e5e7eb;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .idp-main-content-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .idp-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem;
+            flex-shrink: 0;
+        }
+        #content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover { background-color: #4b5563; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-success { background-color: #10b981; }
+        .status-failed { background-color: #ef4444; }
+        .status-pending { background-color: #f59e0b; }
+        .status-running { background-color: #3b82f6; }
+
+        .ai-chat-widget-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .ai-chat-widget {
+            width: 380px;
+            max-height: 500px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+         .ai-chat-widget.minimized {
+            height: 50px !important;
+            width: 250px;
+        }
+        .ai-chat-widget.minimized .ai-chat-messages,
+        .ai-chat-widget.minimized .ai-chat-input {
+            display: none;
+        }
+        .ai-chat-header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 10px 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .ai-chat-messages {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chat-message { padding: 10px 15px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
+        .user-message { background-color: #dbeafe; color: #1e40af; align-self: flex-end; margin-left: auto; }
+        .ai-message { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; margin-right: auto; }
+        .ai-message strong { color: #1d4ed8; }
+        .ai-message ul { list-style-type: disc; margin-left: 20px; margin-top: 5px; }
+        .ai-message a { color: #2563eb; text-decoration: underline; }
+        .ai-chat-input { border-top: 1px solid #e5e7eb; padding: 12px; display: flex; }
+    </style>
+</head>
+<body>
+    <div id="login-view" class="login-container">
+        <div class="login-card w-full max-w-md p-8 rounded-xl shadow-2xl">
+            <div class="text-center mb-8">
+                <i class="fas fa-cogs text-5xl text-blue-600"></i>
+                <h1 class="text-3xl font-bold text-gray-800 mt-4">Internal Developer Portal</h1>
+                <p class="text-gray-600">Acesse sua conta para continuar</p>
+            </div>
+            <form id="login-form-credentials">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                    <input type="text" id="username" name="username" value="desenvolvedor"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Seu usuário">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input type="password" id="password" name="password" value="pass123"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Sua senha">
+                </div>
+                <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out mb-4">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Entrar com Credenciais
+                </button>
+            </form>
+            <div class="relative flex py-3 items-center">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink mx-4 text-gray-500 text-sm">OU</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+            <button id="sso-login-button"
+                    class="w-full sso-button text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out mt-4">
+                <i class="fas fa-lock mr-2"></i>Entrar com SSO Corporativo
+            </button>
+            <p class="text-center text-xs text-gray-500 mt-8">
+                &copy; 2025 Minha Empresa. Todos os direitos reservados.
+            </p>
+        </div>
+    </div>
+
+    <div id="idp-container" class="idp-container hidden">
+        <aside class="idp-sidebar p-6">
+            <div>
+                <h1 class="text-3xl font-bold mb-10 text-white">Meu IDP</h1>
+                <nav>
+                    <ul>
+                        <li class="mb-4"><a href="#" onclick="showView('dashboard')" class="idp-nav-link flex items-center p-2 hover:bg-gray-700 rounded-md"><i class="fas fa-tachometer-alt w-6 mr-3"></i>Painel</a></li>
+                        <li class="mb-4"><a href="#" onclick="showView('services')" class="idp-nav-link flex items-center p-2 hover:bg-gray-700 rounded-md"><i class="fas fa-cubes w-6 mr-3"></i>Serviços</a></li>
+                        <li class="mb-4"><a href="#" onclick="showView('create-service')" class="idp-nav-link flex items-center p-2 hover:bg-gray-700 rounded-md"><i class="fas fa-plus-circle w-6 mr-3"></i>Novo Serviço</a></li>
+                        <li class="mb-4"><a href="#" onclick="showView('docs')" class="idp-nav-link flex items-center p-2 hover:bg-gray-700 rounded-md"><i class="fas fa-book w-6 mr-3"></i>Documentação</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div>
+                <a href="#" id="logout-button" class="flex items-center p-2 hover:bg-gray-700 rounded-md"><i class="fas fa-sign-out-alt w-6 mr-3"></i>Sair</a>
+            </div>
+        </aside>
+
+        <div class="idp-main-content-wrapper">
+            <header class="idp-header flex justify-between items-center">
+                <input type="text" placeholder="Procurar serviços, docs..." class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-1/2">
+                <div class="flex items-center">
+                    <img src="https://placehold.co/40x40/A78BFA/FFFFFF?text=DS" alt="Avatar do Usuário" id="user-avatar" class="w-10 h-10 rounded-full mr-3">
+                    <div>
+                        <p class="font-semibold text-gray-700" id="user-name-display">Dev Senior</p>
+                        <p class="text-sm text-gray-500" id="user-role-display">Engenheiro(a) Especialista</p>
+                    </div>
+                </div>
+            </header>
+
+            <div id="content-area">
+                </div>
+        </div>
+
+        <div id="ai-chat-widget-container" class="ai-chat-widget-container">
+            <div id="ai-chat-widget" class="ai-chat-widget">
+                <div class="ai-chat-header" id="ai-chat-header-clickable">
+                    <span>Assistente IA</span>
+                    <button id="ai-chat-toggle-button" class="text-white hover:text-gray-200">
+                        <i class="fas fa-window-minimize"></i> </button>
+                </div>
+                <div id="ai-chat-messages" class="ai-chat-messages">
+                    <div class="ai-message chat-message">
+                        Olá! Sou seu assistente IA. Como posso ajudar?
+                        <br>Pergunte sobre:
+                        <ul>
+                            <li>Dependências de <strong>api-pedidos</strong></li>
+                            <li>Dono do <strong>servico-usuarios</strong></li>
+                            <li>Documentação do <strong>frontend-catalogo</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="ai-chat-input">
+                    <input type="text" id="ai-user-input" class="flex-1 border border-gray-300 rounded-l-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Pergunte à IA...">
+                    <button id="ai-send-button" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-r-md">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginView = document.getElementById('login-view');
+        const idpContainer = document.getElementById('idp-container');
+        const loginFormCredentials = document.getElementById('login-form-credentials');
+        const ssoLoginButton = document.getElementById('sso-login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const contentArea = document.getElementById('content-area');
+
+        // Dados Mockados do IDP
+        let services = [
+            { id: 1, name: 'API de Pedidos', status: 'Running', lastCommit: 'há 2 horas por D. Senior', owner: 'Equipe Omega', template: 'Java Spring Boot', pipeline: [{stage: 'Commit', status: 'success'}, {stage: 'Build', status: 'success'}, {stage: 'Testes Unitários', status: 'success'}, {stage: 'Deploy Dev', status: 'success'}, {stage: 'Deploy Prod', status: 'pending'}], logs: [{timestamp: '2025-05-31 14:00', message: 'Build #789 iniciado...', type: 'info'}, {timestamp: '2025-05-31 14:05', message: 'Testes aprovados (210/210)', type: 'success'}]},
+            { id: 2, name: 'Serviço de Usuários', status: 'Build Failed', lastCommit: 'há 1 hora por A. Pleno', owner: 'Equipe Alpha', template: 'Node.js API', pipeline: [{stage: 'Commit', status: 'success'}, {stage: 'Build', status: 'failed', error: 'Erro de compilação em userUtils.js:55'}, {stage: 'Testes Unitários', status: 'skipped'}], logs: [{timestamp: '2025-05-31 15:00', message: 'Build #101 falhou.', type: 'error'}]},
+            { id: 3, name: 'Frontend Catálogo', status: 'Deploying', lastCommit: 'há 3 dias por C. Junior', owner: 'Equipe Web', template: 'React App', pipeline: [{stage: 'Commit', status: 'success'}, {stage: 'Build', status: 'success'}, {stage: 'Deploy Staging', status: 'running'}], logs: [] },
+        ];
+        let nextServiceId = 4;
+
+        // Dados Mockados para o Assistente IA
+        const mockServiceDataAI = {
+            "api-pedidos": {
+                owner: "Equipe Omega",
+                readme: "https://github.com/empresa/api-pedidos/blob/main/README.md",
+                dependencies: { "spring-boot-starter-web": "3.0.1", "kafka-clients": "3.2.0" },
+                documentationLinks: ["https://confluence.empresa.com/display/KB/API+Pedidos+v2"]
+            },
+            "servico-usuarios": {
+                owner: "Equipe Alpha",
+                readme: "https://github.com/empresa/servico-usuarios/blob/main/README.md",
+                dependencies: { "express": "^4.18.2", "mongodb": "^5.0.0" },
+                documentationLinks: []
+            },
+            "frontend-catalogo": {
+                owner: "Equipe Web",
+                readme: "https://github.com/empresa/frontend-catalogo/blob/main/README.md",
+                dependencies: { "react": "^18.2.0", "axios": "^1.3.0", "@tanstack/react-query": "^4.20.0" },
+                documentationLinks: ["https://confluence.empresa.com/display/KB/Frontend+Catalogo+UI"]
+            }
+        };
+
+        // Lógica de Login
+        function performLogin(username = "Usuário SSO") {
+            document.getElementById('user-name-display').textContent = username;
+            loginView.classList.add('hidden');
+            idpContainer.classList.remove('hidden');
+            showView('dashboard');
+        }
+
+        loginFormCredentials.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('username').value;
+            // Simulação de autenticação de credenciais
+            if (usernameInput && document.getElementById('password').value) {
+                performLogin(usernameInput || "Usuário");
+            } else {
+                alert("Por favor, preencha usuário e senha.");
+            }
+        });
+
+        ssoLoginButton.addEventListener('click', function() {
+            // Simulação de redirecionamento e retorno de SSO
+            addAiMessage("Login via SSO Corporativo simulado...", "ai-system");
+            setTimeout(() => {
+                performLogin("Usuário Corporativo SSO");
+            }, 1500);
+        });
+
+        logoutButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            idpContainer.classList.add('hidden');
+            loginView.classList.remove('hidden');
+            document.getElementById('ai-chat-messages').innerHTML = `
+                <div class="ai-message chat-message">
+                    Olá! Sou seu assistente IA. Como posso ajudar?
+                    <br>Pergunte sobre:
+                    <ul>
+                        <li>Dependências de <strong>api-pedidos</strong></li>
+                        <li>Dono do <strong>servico-usuarios</strong></li>
+                        <li>Documentação do <strong>frontend-catalogo</strong></li>
+                    </ul>
+                </div>`;
+        });
+
+
+        // Lógica de Navegação do IDP
+        function showView(viewName, params = null) {
+            const contentArea = document.getElementById('content-area');
+            document.querySelectorAll('.idp-nav-link').forEach(link => {
+                link.classList.remove('bg-gray-600', 'font-semibold');
+                if (link.getAttribute('onclick').includes(`'${viewName}'`)) {
+                    link.classList.add('bg-gray-600', 'font-semibold');
+                }
+            });
+
+            switch (viewName) {
+                case 'dashboard':
+                    contentArea.innerHTML = renderDashboard();
+                    break;
+                case 'services':
+                    contentArea.innerHTML = renderServicesList();
+                    break;
+                case 'service-detail':
+                    contentArea.innerHTML = renderServiceDetail(params.id);
+                    break;
+                case 'create-service':
+                    contentArea.innerHTML = renderCreateServiceForm();
+                     const createServiceForm = document.getElementById('createServiceForm');
+                    if (createServiceForm) {
+                        createServiceForm.addEventListener('submit', handleCreateServiceSubmit);
+                    }
+                    break;
+                case 'docs':
+                    contentArea.innerHTML = renderDocs();
+                    break;
+                default:
+                    contentArea.innerHTML = `<h2 class="text-2xl font-bold text-gray-700">Página não encontrada</h2>`;
+            }
+        }
+
+        function getStatusClass(status) {
+            if (status === 'Running' || status === 'Deployed') return 'text-green-600';
+            if (status === 'Build Failed' || status === 'Error') return 'text-red-600';
+            if (status === 'Pending' || status === 'Deploying') return 'text-yellow-600';
+            if (status === 'Building' || status === 'In Progress') return 'text-blue-600';
+            return 'text-gray-600';
+        }
+
+        function getDotStatusClass(status) {
+            if (status === 'Running' || status === 'Deployed' || status === 'success') return 'status-success';
+            if (status === 'Build Failed' || status === 'Error' || status === 'failed') return 'status-failed';
+            if (status === 'Pending' || status === 'Deploying' || status === 'pending') return 'status-pending';
+            if (status === 'Building' || status === 'In Progress' || status === 'running') return 'status-running';
+            return 'bg-gray-400';
+        }
+
+        function renderDashboard() {
+            const recentActivity = services.slice(0, 2).map(s => `
+                <div class="card p-4 mb-4">
+                    <h3 class="font-semibold text-lg text-gray-800">${s.name}</h3>
+                    <p class="text-sm text-gray-600">Status: <span class="status-dot ${getDotStatusClass(s.status)}"></span>${s.status}</p>
+                    <p class="text-sm text-gray-500">Última atualização: ${s.lastCommit}</p>
+                </div>
+            `).join('');
+
+            return `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Painel Principal</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Total de Serviços</h3>
+                        <p class="text-4xl font-bold text-blue-600">${services.length}</p>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Builds com Sucesso (Hoje)</h3>
+                        <p class="text-4xl font-bold text-green-600">${services.filter(s => s.status === 'Running' || (s.pipeline && s.pipeline.every(p => p.status === 'success'))).length}</p>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Builds com Falha (Hoje)</h3>
+                        <p class="text-4xl font-bold text-red-600">${services.filter(s => s.status === 'Build Failed').length}</p>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold mb-4 text-gray-800">Atividade Recente</h3>
+                    ${recentActivity || '<p class="text-gray-600">Nenhuma atividade recente.</p>'}
+                </div>
+                <button onclick="showView('create-service')" class="mt-6 btn-primary font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out">
+                    <i class="fas fa-plus-circle mr-2"></i>Criar Novo Serviço
+                </button>
+            `;
+        }
+
+        function renderServicesList() {
+            let serviceItems = services.map(service => `
+                <div class="card p-6 mb-4 flex justify-between items-center hover:shadow-lg transition-shadow duration-150">
+                    <div>
+                        <h3 class="text-xl font-semibold text-blue-600 hover:underline cursor-pointer" onclick="showView('service-detail', {id: ${service.id}})">${service.name}</h3>
+                        <p class="text-sm text-gray-600">Proprietário: ${service.owner} | Template: ${service.template}</p>
+                        <p class="text-sm">
+                            Status: <span class="status-dot ${getDotStatusClass(service.status)}"></span>
+                            <span class="${getStatusClass(service.status)} font-medium">${service.status}</span>
+                        </p>
+                        <p class="text-xs text-gray-500">Último commit: ${service.lastCommit}</p>
+                    </div>
+                    <div>
+                        <button onclick="showView('service-detail', {id: ${service.id}})" class="btn-primary text-sm py-2 px-4 rounded-md mr-2"><i class="fas fa-eye mr-1"></i>Detalhes</button>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Meus Serviços</h2>
+                    <button onclick="showView('create-service')" class="btn-primary font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out">
+                        <i class="fas fa-plus-circle mr-2"></i>Criar Novo Serviço
+                    </button>
+                </div>
+                ${serviceItems || '<p class="text-gray-600">Nenhum serviço encontrado.</p>'}
+            `;
+        }
+        function renderServiceDetail(serviceId) {
+            const service = services.find(s => s.id === serviceId);
+            if (!service) return `<h2>Serviço não encontrado</h2>`;
+
+            const pipelineSteps = (service.pipeline || []).map(step => `
+                <div class="flex items-center mb-3 p-3 rounded-md ${step.status === 'success' ? 'bg-green-50' : step.status === 'failed' ? 'bg-red-50' : step.status === 'pending' ? 'bg-yellow-50' : step.status === 'running' ? 'bg-blue-50' : 'bg-gray-50'}">
+                    <span class="status-dot ${getDotStatusClass(step.status)}"></span>
+                    <span class="font-medium text-gray-700">${step.stage}</span>
+                    ${step.status === 'failed' ? `<span class="ml-auto text-xs text-red-600 bg-red-100 px-2 py-1 rounded">${step.error || 'Falhou'}</span>` : ''}
+                    ${step.status === 'success' ? `<i class="fas fa-check-circle text-green-500 ml-auto"></i>` : ''}
+                    ${step.status === 'pending' ? `<i class="fas fa-clock text-yellow-500 ml-auto"></i>` : ''}
+                    ${step.status === 'running' ? `<i class="fas fa-spinner fa-spin text-blue-500 ml-auto"></i>` : ''}
+                </div>
+            `).join('');
+
+            const logs = (service.logs || []).map(log => `
+                <div class="text-sm p-2 border-b border-gray-200 ${log.type === 'error' ? 'text-red-600 bg-red-50' : log.type === 'success' ? 'text-green-600 bg-green-50' : 'text-gray-700'}">
+                    <span class="font-mono text-xs text-gray-500">${log.timestamp}:</span> ${log.message}
+                </div>
+            `).join('');
+
+            return `
+                <button onclick="showView('services')" class="mb-6 text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-2"></i>Voltar para Serviços</button>
+                <h2 class="text-3xl font-bold mb-2 text-gray-800">${service.name}</h2>
+                <p class="mb-1 text-gray-600">Status: <span class="status-dot ${getDotStatusClass(service.status)}"></span><span class="${getStatusClass(service.status)} font-semibold">${service.status}</span></p>
+                <p class="mb-6 text-sm text-gray-500">Template: ${service.template} | Proprietário: ${service.owner}</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Pipeline CI/CD</h3>
+                        ${pipelineSteps || '<p class="text-gray-500">Nenhuma informação de pipeline disponível.</p>'}
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Ações Rápidas</h3>
+                        <button class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md mb-3 transition duration-150"><i class="fas fa-rocket mr-2"></i>Deploy para Produção</button>
+                        <button class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md transition duration-150"><i class="fab fa-git-alt mr-2"></i>Ver Repositório</button>
+                    </div>
+                </div>
+
+                <div class="card p-6 mt-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Logs Recentes</h3>
+                    <div class="max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-md font-mono text-xs">
+                        ${logs || '<p class="text-gray-500">Nenhum log disponível.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+        function renderCreateServiceForm() {
+             return `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Criar Novo Serviço</h2>
+                <div class="card p-8">
+                    <form id="createServiceForm">
+                        <div class="mb-6">
+                            <label for="serviceName" class="block text-sm font-medium text-gray-700 mb-1">Nome do Serviço</label>
+                            <input type="text" id="serviceName" name="serviceName" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-6">
+                            <label for="serviceOwner" class="block text-sm font-medium text-gray-700 mb-1">Equipe Proprietária</label>
+                            <input type="text" id="serviceOwner" name="serviceOwner" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-6">
+                            <label for="serviceTemplate" class="block text-sm font-medium text-gray-700 mb-1">Template do Serviço</label>
+                            <select id="serviceTemplate" name="serviceTemplate" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Node.js API">Node.js API (Padrão)</option>
+                                <option value="Java Spring Boot">Java Spring Boot (Microsserviço)</option>
+                                <option value="Python FastAPI">Python FastAPI (Serviço Leve)</option>
+                                <option value="React App">React App (Frontend SPA)</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" onclick="showView('services')" class="mr-4 py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                            <button type="submit" class="btn-primary font-semibold py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out">
+                                <i class="fas fa-cogs mr-2"></i>Criar Serviço
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+        function handleCreateServiceSubmit(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const newService = {
+                id: nextServiceId++,
+                name: formData.get('serviceName'),
+                status: 'Pending',
+                lastCommit: 'agora mesmo por ' + document.getElementById('user-name-display').textContent,
+                owner: formData.get('serviceOwner'),
+                template: formData.get('serviceTemplate'),
+                pipeline: [],
+                logs: [{timestamp: new Date().toISOString().slice(0,16).replace('T',' '), message: `Criação do serviço '${formData.get('serviceName')}' solicitada...`, type: 'info'}]
+            };
+            services.unshift(newService);
+            addAiMessage(`Serviço '${newService.name}' foi criado e está sendo provisionado.`, "ai-system");
+            showView('service-detail', {id: newService.id});
+
+            // Simular provisionamento
+            setTimeout(() => {
+                const srv = services.find(s => s.id === newService.id);
+                if (srv) {
+                    srv.status = 'Running';
+                    srv.pipeline = [{stage: 'Provisionamento', status: 'success'}, {stage: 'Deploy Inicial Dev', status: 'success'}];
+                    srv.logs.push({timestamp: new Date().toISOString().slice(0,16).replace('T',' '), message: `Serviço '${srv.name}' provisionado com sucesso.`, type: 'success'});
+                    addAiMessage(`Serviço '${srv.name}' foi provisionado!`, "ai-system");
+                    const currentViewIdText = document.querySelector('#content-area h2')?.textContent;
+                    if (currentViewIdText && currentViewIdText.includes(srv.name)) {
+                        showView('service-detail', {id: srv.id});
+                    } else if (document.querySelector('#content-area h2')?.textContent === "Meus Serviços") {
+                         showView('services');
+                    }
+                }
+            }, 3000);
+        }
+
+        function renderDocs() {
+            return `
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Documentação</h2>
+                <div class="card p-8">
+                    <h3 class="text-xl font-semibold mb-3 text-gray-700">Guia de Início Rápido do IDP</h3>
+                    <p class="mb-4 text-gray-600">Aprenda a navegar, criar serviços e utilizar o assistente IA.</p>
+                    <a href="#" class="text-blue-600 hover:underline">Ler Guia <i class="fas fa-arrow-right ml-1"></i></a>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-700">Padrões de Arquitetura</h3>
+                    <p class="mb-4 text-gray-600">Consulte os padrões recomendados para desenvolvimento de microsserviços.</p>
+                     <a href="#" class="text-blue-600 hover:underline mt-2 inline-block">Ver Padrões <i class="fas fa-arrow-right ml-1"></i></a>
+                </div>
+            `;
+        }
+
+
+        // Assistente IA
+        const aiChatMessages = document.getElementById('ai-chat-messages');
+        const aiUserInput = document.getElementById('ai-user-input');
+        const aiSendButton = document.getElementById('ai-send-button');
+        const aiChatHeaderClickable = document.getElementById('ai-chat-header-clickable');
+        const aiChatWidget = document.getElementById('ai-chat-widget');
+        const aiChatToggleButton = document.getElementById('ai-chat-toggle-button');
+        let isAiChatMinimized = false;
+
+        function addAiMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message');
+            if (sender === 'user') {
+                messageDiv.classList.add('user-message');
+                messageDiv.textContent = message;
+            } else {
+                messageDiv.classList.add('ai-message');
+                let htmlMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                htmlMessage = htmlMessage.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+                if (htmlMessage.includes('\n- ')) {
+                    const parts = htmlMessage.split('\n- ');
+                    let listHtml = parts[0];
+                    if (parts.length > 1) {
+                        listHtml += '<ul>';
+                        for (let i = 1; i < parts.length; i++) {
+                            listHtml += `<li>${parts[i].trim()}</li>`;
+                        }
+                        listHtml += '</ul>';
+                    }
+                    htmlMessage = listHtml;
+                }
+                messageDiv.innerHTML = htmlMessage;
+                 if (sender === "ai-system") {
+                    messageDiv.classList.add("italic", "text-xs", "text-gray-500", "border-l-2", "border-blue-300", "pl-2");
+                }
+            }
+            aiChatMessages.appendChild(messageDiv);
+            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+        }
+
+        function processAiQuery(query) {
+            addAiMessage(query, 'user');
+            aiUserInput.value = '';
+            aiUserInput.disabled = true;
+            aiSendButton.disabled = true;
+
+            setTimeout(() => {
+                let aiResponse = "Desculpe, não consegui processar sua pergunta. Tente ser mais específico sobre o serviço e a informação desejada (ex: 'dependências do api-pedidos', 'dono do servico-usuarios', 'documentação do frontend-catalogo').";
+                const lowerQuery = query.toLowerCase();
+                let serviceName = null;
+
+                const serviceKeywords = Object.keys(mockServiceDataAI);
+                for (const keyword of serviceKeywords) {
+                    if (lowerQuery.includes(keyword)) {
+                        serviceName = keyword;
+                        break;
+                    }
+                }
+
+                if (serviceName && mockServiceDataAI[serviceName]) {
+                    const service = mockServiceDataAI[serviceName];
+                    if (lowerQuery.includes("dependência") || lowerQuery.includes("dependencias")) {
+                        aiResponse = `As dependências diretas do serviço **${serviceName}** são:\n`;
+                        if (service.dependencies && Object.keys(service.dependencies).length > 0) {
+                            for (const [dep, version] of Object.entries(service.dependencies)) {
+                                aiResponse += `- ${dep}: ${version}\n`;
+                            }
+                        } else {
+                            aiResponse += "- Nenhuma dependência direta listada.";
+                        }
+                    } else if (lowerQuery.includes("dono") || lowerQuery.includes("proprietário") || lowerQuery.includes("equipe")) {
+                        aiResponse = `A equipe dona do serviço **${serviceName}** é: **${service.owner}**.`;
+                    } else if (lowerQuery.includes("documentação") || lowerQuery.includes("readme")) {
+                        aiResponse = `O README do serviço **${serviceName}** está em: [${service.readme}](${service.readme})\n`;
+                        if (service.documentationLinks && service.documentationLinks.length > 0) {
+                            aiResponse += `\nOutros links de documentação:`;
+                            service.documentationLinks.forEach(link => {
+                                aiResponse += `\n- [Documentação Adicional](${link})`;
+                            });
+                        } else {
+                             aiResponse += `\nNão encontrei outros links de documentação para **${serviceName}** no catálogo.`;
+                        }
+                    } else {
+                         aiResponse = `Entendi que você perguntou sobre o serviço **${serviceName}**, mas não ficou claro o que você gostaria de saber. Poderia perguntar sobre 'dependências', 'dono' ou 'documentação'?`;
+                    }
+                } else if (serviceName) {
+                    aiResponse = `Não encontrei informações para o serviço "**${serviceName}**" na minha base de conhecimento atual.`;
+                }
+
+
+                addAiMessage(aiResponse, 'ai');
+                aiUserInput.disabled = false;
+                aiSendButton.disabled = false;
+                aiUserInput.focus();
+            }, 800 + Math.random() * 500);
+        }
+
+        aiSendButton.addEventListener('click', () => {
+            const query = aiUserInput.value.trim();
+            if (query) processAiQuery(query);
+        });
+
+        aiUserInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                const query = aiUserInput.value.trim();
+                if (query) processAiQuery(query);
+            }
+        });
+
+        aiChatHeaderClickable.addEventListener('click', () => {
+            isAiChatMinimized = !isAiChatMinimized;
+            aiChatWidget.classList.toggle('minimized', isAiChatMinimized);
+            if (isAiChatMinimized) {
+                aiChatToggleButton.innerHTML = '<i class="fas fa-window-maximize"></i>';
+            } else {
+                aiChatToggleButton.innerHTML = '<i class="fas fa-window-minimize"></i>';
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            }
+        });
+
+    </script>
+</body>
+</html>
